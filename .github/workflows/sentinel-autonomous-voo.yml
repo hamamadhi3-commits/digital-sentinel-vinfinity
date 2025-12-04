@@ -1,23 +1,60 @@
-name: ♾️ Digital Sentinel Quantum Immortal Loop
+name: 🛰️ Digital Sentinel | Eternal Quantum Loop
+
 on:
   workflow_dispatch:
-  push:
+  schedule:
+    - cron: "0 */6 * * *"   # Run every 6 hours
 
 jobs:
   eternal-hunter:
     runs-on: ubuntu-latest
-    timeout-minutes: 43200
+    timeout-minutes: 600
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install requests aiohttp beautifulsoup4 schedule
+      - name: Install Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "✅ Dependencies installed successfully."
 
       - name: Activate Eternal Quantum Loop
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python3 src/quantum_immortal_loop.py
+        run: |
+          echo "🚀 Launching Quantum Immortal Loop Engine..."
+          python3 src/quantum_immortal_loop.py || (
+            echo "❌ Quantum loop crashed, retrying in 30s..." &&
+            sleep 30 &&
+            python3 src/quantum_immortal_loop.py
+          )
+
+      - name: Archive Reports
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp -r data/results artifacts/ || true
+          echo "📦 Reports archived."
+
+      - name: Upload Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sentinel-Reports
+          path: artifacts/
+
+      - name: Post Mission Log
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          echo "🛰️ Digital Sentinel Quantum v∞ cycle finished."
+          echo "📡 Sending final status to Discord..."
+          python3 src/discord_reporter.py || echo "⚠️ Discord reporting skipped."
