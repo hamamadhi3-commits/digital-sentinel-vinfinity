@@ -1,1 +1,23 @@
+name: ♾️ Digital Sentinel Quantum Immortal Loop
+on:
+  workflow_dispatch:
+  push:
 
+jobs:
+  eternal-hunter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 43200
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests aiohttp beautifulsoup4 schedule
+
+      - name: Activate Eternal Quantum Loop
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python3 src/quantum_immortal_loop.py
