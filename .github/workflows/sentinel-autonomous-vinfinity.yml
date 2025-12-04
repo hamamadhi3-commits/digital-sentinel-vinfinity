@@ -1,0 +1,78 @@
+name: ♾️ Digital Sentinel | Autonomous v∞
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */3 * * *"  # run every 3 hours
+
+jobs:
+  eternal-hunter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "✅ Dependencies installed successfully."
+
+      - name: Detect Quantum Core
+        id: detect_core
+        run: |
+          echo "🔍 Checking for quantum_immortal_loop.py ..."
+          if [ -f "src/quantum_immortal_loop.py" ]; then
+            echo "core_path=src/quantum_immortal_loop.py" >> $GITHUB_OUTPUT
+            echo "✅ Quantum Immortal Loop Core found!"
+          else
+            echo "⚠️ Core not found, switching to main_controller_v11_4_quantum.py"
+            echo "core_path=src/main_controller_v11_4_quantum.py" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Launch Eternal Quantum Intelligence
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          CORE_FILE="${{ steps.detect_core.outputs.core_path }}"
+          echo "🚀 Running core: $CORE_FILE"
+          python3 "$CORE_FILE" || (
+            echo "❌ Crash detected, retrying in 60 seconds..." &&
+            sleep 60 &&
+            python3 "$CORE_FILE"
+          )
+
+      - name: Archive Reports
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp -r data/results artifacts/ || true
+          echo "📦 Reports archived."
+
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sentinel-Reports
+          path: artifacts/
+
+      - name: Dispatch Discord Report
+        if: always()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          echo "📡 Sending summary to Discord..."
+          python3 src/discord_reporter.py || echo "⚠️ Discord reporter disabled."
+
+      - name: Quantum Continuity Loop
+        if: always()
+        run: |
+          echo "♾️ Eternal Quantum Cycle Complete."
+          echo "🕒 Workflow will auto-run again in 3 hours."
