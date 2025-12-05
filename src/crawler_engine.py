@@ -1,57 +1,101 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Digital Sentinel Crawling Engine vInfinity
-Responsible for scanning and collecting URLs, endpoints, JS files, and forms from live subdomains.
+crawling_engine.py
+------------------
+Responsible for crawling discovered live targets to extract:
+ - JavaScript files
+ - internal endpoints
+ - technology fingerprints
+ - metadata for further reconnaissance
+
+This is a lightweight crawler optimized for Digital Sentinel vInfinity.
+It works without external APIs, purely local scanning and pattern extraction.
 """
 
 import os
-import time
-from datetime import datetime
+import requests
+from urllib.parse import urljoin, urlparse
+from bs4 import BeautifulSoup
 
-RESULTS_DIR = "data/results"
-CRAWL_LOG = os.path.join(RESULTS_DIR, "crawling.log")
-os.makedirs(RESULTS_DIR, exist_ok=True)
+# ✅ Optional: safe headers for crawling
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (compatible; DigitalSentinelBot/12.0; "
+        "+https://github.com/hamamadhii3/digital-sentinel-vinfinity)"
+    )
+}
 
-def log_event(message: str):
-    """Simple event logger."""
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    with open(CRAWL_LOG, "a", encoding="utf-8") as f:
-        f.write(f"[{timestamp}] {message}\n")
-    print(message)
+CRAWL_RESULTS_DIR = os.path.join("data", "results", "crawling_reports")
 
 
-def run_crawling(live_hosts: list):
+def run_crawling(targets_file: str = "data/targets.txt", max_depth: int = 1):
     """
-    Simulate crawling — gather URLs and endpoints from each host.
-    Replace this later with real crawling tools (like Katana or custom scraper).
+    Crawl live targets and collect internal links, JS files, and endpoints.
+    Saves results into data/results/crawling_reports/{domain}.txt
     """
-    log_event("🕷️ Starting crawling engine...")
-    crawled_data = {}
+    os.makedirs(CRAWL_RESULTS_DIR, exist_ok=True)
 
-    for host in live_hosts:
-        log_event(f"🌐 Crawling target: {host}")
-        # Mock discovery of endpoints
-        endpoints = [
-            f"https://{host}/login",
-            f"https://{host}/api/status",
-            f"https://{host}/assets/main.js",
-            f"https://{host}/robots.txt"
-        ]
-        crawled_data[host] = endpoints
-        time.sleep(0.5)
+    try:
+        with open(targets_file, "r", encoding="utf-8") as f:
+            targets = [line.strip() for line in f if line.strip()]
+    except FileNotFoundError:
+        print(f"⚠️ [Crawler] Target file not found: {targets_file}")
+        return []
 
-    # Save results
-    output_file = os.path.join(RESULTS_DIR, "crawled_endpoints.json")
-    with open(output_file, "w", encoding="utf-8") as f:
-        import json
-        json.dump(crawled_data, f, indent=2)
+    print(f"🕷️ [Crawler] Starting crawl for {len(targets)} targets...")
 
-    log_event(f"✅ Crawling complete — {len(crawled_data)} hosts processed.")
-    log_event(f"💾 Saved → {output_file}")
-    return crawled_data
+    crawled_results = []
+
+    for target in targets:
+        url = f"https://{target}" if not target.startswith("http") else target
+        domain = urlparse(url).netloc
+        output_path = os.path.join(CRAWL_RESULTS_DIR, f"{domain}.txt")
+
+        try:
+            print(f"🌐 Crawling {url} ...")
+            response = requests.get(url, headers=HEADERS, timeout=10)
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            found_links = set()
+            js_files = set()
+
+            for link in soup.find_all("a", href=True):
+                href = urljoin(url, link["href"])
+                if domain in href:
+                    found_links.add(href)
+
+            for script in soup.find_all("script", src=True):
+                src = urljoin(url, script["src"])
+                js_files.add(src)
+
+            # Save results
+            with open(output_path, "w", encoding="utf-8") as out:
+                out.write(f"# Crawling report for {domain}\n")
+                out.write(f"# Total internal links: {len(found_links)}\n")
+                out.write(f"# Total JS files: {len(js_files)}\n\n")
+
+                out.write("[Internal Links]\n")
+                for l in found_links:
+                    out.write(l + "\n")
+
+                out.write("\n[JavaScript Files]\n")
+                for j in js_files:
+                    out.write(j + "\n")
+
+            crawled_results.append({
+                "domain": domain,
+                "links": len(found_links),
+                "scripts": len(js_files)
+            })
+            print(f"✅ [Crawler] {domain} → {len(found_links)} links, {len(js_files)} JS files")
+
+        except Exception as e:
+            print(f"⚠️ [Crawler] Error crawling {target}: {e}")
+
+    print("🧩 Crawling complete.")
+    return crawled_results
 
 
 if __name__ == "__main__":
-    test_hosts = ["api.example.com", "dev.example.com"]
-    run_crawling(test_hosts)
+    run_crawling()
