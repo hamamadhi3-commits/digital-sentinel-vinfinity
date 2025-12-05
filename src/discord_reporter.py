@@ -1,31 +1,30 @@
+# src/discord_reporter.py
 import requests
 import json
+import os
 
-class DiscordReporter:
-    def __init__(self, webhook_url):
-        self.webhook_url = webhook_url
+def send_report(message: str, title: str = "Digital Sentinel Report"):
+    """Send a formatted message to Discord webhook."""
+    webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+    if not webhook_url:
+        print("❌ No DISCORD_WEBHOOK_URL found.")
+        return
 
-    def send_embed(self, report_file, submissions):
-        embed = {
-            "username": "Digital Sentinel • Quantum Infinity v∞.5",
-            "embeds": [
-                {
-                    "title": "🧩 Bugcrowd Report Template Ready",
-                    "description": "Cycle validated successfully. Copy these fields into your Bugcrowd submission form.",
-                    "color": 5814783,
-                    "fields": [
-                        {"name": "📁 Report File", "value": report_file, "inline": False},
-                        {"name": "🧠 Reports Ready", "value": str(len(submissions)), "inline": True},
-                        {"name": "⚙️ Validator", "value": "Active", "inline": True}
-                    ],
-                    "footer": {"text": "Digital Sentinel • Quantum Infinity v∞.6"},
-                }
-            ]
-        }
+    payload = {
+        "embeds": [
+            {
+                "title": title,
+                "description": message,
+                "color": 0x00FFAA
+            }
+        ]
+    }
 
-        data = json.dumps(embed)
-        try:
-            res = requests.post(self.webhook_url, headers={"Content-Type": "application/json"}, data=data)
-            print("✅ Discord notification sent:", res.status_code)
-        except Exception as e:
-            print("❌ Discord notification failed:", str(e))
+    try:
+        response = requests.post(webhook_url, data=json.dumps(payload), headers={"Content-Type": "application/json"})
+        if response.status_code == 204:
+            print("✅ Discord report sent successfully.")
+        else:
+            print(f"⚠️ Discord returned {response.status_code}: {response.text}")
+    except Exception as e:
+        print(f"❌ Failed to send Discord message: {e}")
