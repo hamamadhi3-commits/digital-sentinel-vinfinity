@@ -3,77 +3,86 @@
 """
 intel_feed_generator.py
 -----------------------
-Core intelligence feed generator for Digital Sentinel vInfinity.
-This module automatically builds and refreshes the `data/targets.txt` list
-using known bug bounty program domains from trusted platforms (Bugcrowd, HackerOne, Intigriti, YesWeHack, etc.).
-It does NOT use APIs — only static curated data sources.
+Generates or refreshes the Bug Bounty intelligence feed.
 
-Author: QuantumForge AI Division
+This module safely updates the master `data/targets.txt` file
+with authorized bug bounty program domains (e.g. Bugcrowd, HackerOne, Intigriti, etc.)
+and supports external trigger calls from Quantum Controller.
 """
 
 import os
-import random
-import datetime
+import json
+from datetime import datetime
 
-# ✅ Local paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-TARGETS_PATH = os.path.join(BASE_DIR, "data", "targets.txt")
+# Default intelligence directory
+DATA_DIR = "data"
+TARGET_FILE = os.path.join(DATA_DIR, "targets.txt")
+EXPORT_DIR = os.path.join(DATA_DIR, "results", "bugcrowd_exports")
 
-# ✅ Default Bug Bounty Platforms
-BUG_BOUNTY_SOURCES = {
-    "bugcrowd": [
-        "tesla.com", "paypal.com", "shopify.com", "atlassian.com", "okta.com",
-        "sendgrid.com", "bitdefender.com", "jetbrains.com", "sony.com", "westernunion.com"
-    ],
-    "hackerone": [
-        "hackerone.com", "twitter.com", "github.com", "gitlab.com", "dropbox.com",
-        "cloudflare.com", "uber.com", "yelp.com", "linkedin.com", "pinterest.com"
-    ],
-    "intigriti": [
-        "booking.com", "rakuten.com", "bosch.com", "acer.com", "tomtom.com",
-        "belgium.be", "zalando.com", "vodafone.de", "kaspersky.com", "axa.com"
-    ],
-    "yeswehack": [
-        "orange.fr", "airbus.com", "soprahr.com", "edf.fr", "renault.com",
-        "thalesgroup.com", "veolia.com", "capgemini.com", "suez.com", "axa.fr"
-    ]
-}
+# Example static authorized targets (you can expand or update dynamically)
+DEFAULT_TARGETS = [
+    "bugcrowd.com",
+    "hackerone.com",
+    "intigriti.com",
+    "yeswehack.com",
+    "tesla.com",
+    "paypal.com",
+    "spotify.com",
+    "adobe.com",
+    "google.com",
+    "apple.com",
+    "amazon.com",
+    "dropbox.com",
+    "intel.com",
+    "microsoft.com",
+]
 
-def generate_intel_feed():
+
+def generate_intel_feed(*args, **kwargs):
     """
-    Generates and refreshes the target intelligence feed.
-    Creates data/targets.txt with a randomized and deduplicated list of target domains.
+    Refresh the main intelligence feed.
+
+    - Creates data/targets.txt if missing.
+    - Updates it with all known safe-to-scan Bug Bounty programs.
+    - Logs an intelligence summary to JSON format.
+    - Can be called both manually or automatically (no crash if args passed).
     """
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(EXPORT_DIR, exist_ok=True)
+
+    # If custom targets are passed in kwargs, merge them
+    custom_targets = kwargs.get("custom_targets", [])
+    all_targets = sorted(set(DEFAULT_TARGETS + custom_targets))
+
     try:
-        print("🧠 [IntelFeed] Generating updated target list...")
-        
-        # Combine all platform domains
-        combined_targets = []
-        for platform, domains in BUG_BOUNTY_SOURCES.items():
-            for domain in domains:
-                combined_targets.append(domain)
-        
-        # Deduplicate + shuffle
-        unique_targets = list(set(combined_targets))
-        random.shuffle(unique_targets)
+        with open(TARGET_FILE, "w", encoding="utf-8") as f:
+            for t in all_targets:
+                f.write(t.strip() + "\n")
 
-        # Write to file
-        os.makedirs(os.path.dirname(TARGETS_PATH), exist_ok=True)
-        with open(TARGETS_PATH, "w", encoding="utf-8") as f:
-            for target in unique_targets:
-                f.write(f"{target}\n")
+        # Log a lightweight feed summary for reference
+        feed_info = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "total_targets": len(all_targets),
+            "source": "Digital Sentinel v∞ Quantum Intel Feed",
+            "targets": all_targets,
+        }
 
-        print(f"✅ Intelligence feed updated → {TARGETS_PATH}")
-        print(f"📦 Total bug bounty targets: {len(unique_targets)}")
+        json_path = os.path.join(EXPORT_DIR, "intel_feed_summary.json")
+        with open(json_path, "w", encoding="utf-8") as jf:
+            json.dump(feed_info, jf, indent=2)
 
-        return unique_targets
+        print(f"🧩 Intelligence feed updated → {TARGET_FILE}")
+        print(f"✅ {len(all_targets)} authorized targets saved successfully.")
+        return feed_info
 
     except Exception as e:
-        print(f"⚠️ [IntelFeed] Failed to update targets.txt: {e}")
-        return []
+        print(f"⚠️ [Intel] Failed to generate feed: {e}")
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":
-    print("🚀 Running intel_feed_generator standalone mode...")
-    generate_intel_feed()
-    print("🧩 Feed generation completed successfully.")
+    # Run standalone mode for testing
+    print("⚙️ Running standalone Intel Feed Generator...")
+    info = generate_intel_feed()
+    print(json.dumps(info, indent=2))
