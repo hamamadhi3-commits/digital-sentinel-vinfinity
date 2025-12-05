@@ -1,30 +1,30 @@
-# src/discord_reporter.py
 import requests
 import json
 import os
 
-def send_report(message: str, title: str = "Digital Sentinel Report"):
-    """Send a formatted message to Discord webhook."""
-    webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
-    if not webhook_url:
-        print("❌ No DISCORD_WEBHOOK_URL found.")
+DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK_URL", "")
+
+def send_discord_report(report_path, summary=None):
+    if not DISCORD_WEBHOOK:
+        print("⚠️ Discord webhook not configured, skipping report dispatch.")
         return
 
+    with open(report_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
     payload = {
+        "username": "Digital Sentinel",
+        "content": f"🧠 **New Quantum Report Uploaded**\nSummary:\n{summary or 'No summary provided'}",
         "embeds": [
-            {
-                "title": title,
-                "description": message,
-                "color": 0x00FFAA
-            }
+            {"title": "Report File", "description": f"```json\n{content[:1500]}\n```"}
         ]
     }
 
     try:
-        response = requests.post(webhook_url, data=json.dumps(payload), headers={"Content-Type": "application/json"})
+        response = requests.post(DISCORD_WEBHOOK, json=payload)
         if response.status_code == 204:
             print("✅ Discord report sent successfully.")
         else:
-            print(f"⚠️ Discord returned {response.status_code}: {response.text}")
+            print(f"⚠️ Discord report failed → HTTP {response.status_code}")
     except Exception as e:
-        print(f"❌ Failed to send Discord message: {e}")
+        print(f"⚠️ Discord reporting error: {e}")
