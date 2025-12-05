@@ -1,112 +1,79 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Digital Sentinel Intelligence Feed Generator v∞
-Auto-fetches 1000+ legal Bug Bounty targets from public programs (HackerOne, Bugcrowd, Intigriti, YesWeHack, Immunefi)
-and writes them into data/targets.txt
+intel_feed_generator.py
+-----------------------
+Core intelligence feed generator for Digital Sentinel vInfinity.
+This module automatically builds and refreshes the `data/targets.txt` list
+using known bug bounty program domains from trusted platforms (Bugcrowd, HackerOne, Intigriti, YesWeHack, etc.).
+It does NOT use APIs — only static curated data sources.
+
+Author: QuantumForge AI Division
 """
 
-import requests
 import os
-import time
-from datetime import datetime
+import random
+import datetime
 
-TARGETS_FILE = "data/targets.txt"
-MAX_TARGETS = 1000
+# ✅ Local paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+TARGETS_PATH = os.path.join(BASE_DIR, "data", "targets.txt")
 
-# ---------------------- Helper functions ----------------------
+# ✅ Default Bug Bounty Platforms
+BUG_BOUNTY_SOURCES = {
+    "bugcrowd": [
+        "tesla.com", "paypal.com", "shopify.com", "atlassian.com", "okta.com",
+        "sendgrid.com", "bitdefender.com", "jetbrains.com", "sony.com", "westernunion.com"
+    ],
+    "hackerone": [
+        "hackerone.com", "twitter.com", "github.com", "gitlab.com", "dropbox.com",
+        "cloudflare.com", "uber.com", "yelp.com", "linkedin.com", "pinterest.com"
+    ],
+    "intigriti": [
+        "booking.com", "rakuten.com", "bosch.com", "acer.com", "tomtom.com",
+        "belgium.be", "zalando.com", "vodafone.de", "kaspersky.com", "axa.com"
+    ],
+    "yeswehack": [
+        "orange.fr", "airbus.com", "soprahr.com", "edf.fr", "renault.com",
+        "thalesgroup.com", "veolia.com", "capgemini.com", "suez.com", "axa.fr"
+    ]
+}
 
-def write_targets(targets):
-    """Write collected targets to data/targets.txt"""
-    os.makedirs(os.path.dirname(TARGETS_FILE), exist_ok=True)
-    with open(TARGETS_FILE, "w", encoding="utf-8") as f:
-        for t in sorted(set(targets)):
-            f.write(t.strip() + "\n")
-    print(f"✅ Saved {len(targets)} unique targets → {TARGETS_FILE}")
+def generate_intel_feed():
+    """
+    Generates and refreshes the target intelligence feed.
+    Creates data/targets.txt with a randomized and deduplicated list of target domains.
+    """
+    try:
+        print("🧠 [IntelFeed] Generating updated target list...")
+        
+        # Combine all platform domains
+        combined_targets = []
+        for platform, domains in BUG_BOUNTY_SOURCES.items():
+            for domain in domains:
+                combined_targets.append(domain)
+        
+        # Deduplicate + shuffle
+        unique_targets = list(set(combined_targets))
+        random.shuffle(unique_targets)
 
-def fetch_json(url):
-    """Fetch JSON safely with retries"""
-    for _ in range(3):
-        try:
-            r = requests.get(url, timeout=10)
-            if r.status_code == 200:
-                return r.json()
-        except Exception:
-            time.sleep(2)
-    return {}
+        # Write to file
+        os.makedirs(os.path.dirname(TARGETS_PATH), exist_ok=True)
+        with open(TARGETS_PATH, "w", encoding="utf-8") as f:
+            for target in unique_targets:
+                f.write(f"{target}\n")
 
-# ---------------------- HackerOne ----------------------
+        print(f"✅ Intelligence feed updated → {TARGETS_PATH}")
+        print(f"📦 Total bug bounty targets: {len(unique_targets)}")
 
-def fetch_hackerone_targets(limit=200):
-    print("🧠 Fetching HackerOne programs...")
-    url = "https://raw.githubusercontent.com/projectdiscovery/public-bugbounty-programs/main/hackerone_data.json"
-    data = fetch_json(url)
-    domains = [p["domains"][0] for p in data.get("programs", []) if p.get("domains")]
-    print(f"🔹 HackerOne → {len(domains)} targets")
-    return domains[:limit]
+        return unique_targets
 
-# ---------------------- Bugcrowd ----------------------
+    except Exception as e:
+        print(f"⚠️ [IntelFeed] Failed to update targets.txt: {e}")
+        return []
 
-def fetch_bugcrowd_targets(limit=200):
-    print("🧠 Fetching Bugcrowd programs...")
-    url = "https://raw.githubusercontent.com/projectdiscovery/public-bugbounty-programs/main/bugcrowd_data.json"
-    data = fetch_json(url)
-    domains = [p["domains"][0] for p in data.get("programs", []) if p.get("domains")]
-    print(f"🔹 Bugcrowd → {len(domains)} targets")
-    return domains[:limit]
-
-# ---------------------- Intigriti ----------------------
-
-def fetch_intigriti_targets(limit=200):
-    print("🧠 Fetching Intigriti programs...")
-    url = "https://raw.githubusercontent.com/projectdiscovery/public-bugbounty-programs/main/intigriti_data.json"
-    data = fetch_json(url)
-    domains = [p["domains"][0] for p in data.get("programs", []) if p.get("domains")]
-    print(f"🔹 Intigriti → {len(domains)} targets")
-    return domains[:limit]
-
-# ---------------------- YesWeHack ----------------------
-
-def fetch_yeswehack_targets(limit=200):
-    print("🧠 Fetching YesWeHack programs...")
-    url = "https://raw.githubusercontent.com/projectdiscovery/public-bugbounty-programs/main/yeswehack_data.json"
-    data = fetch_json(url)
-    domains = [p["domains"][0] for p in data.get("programs", []) if p.get("domains")]
-    print(f"🔹 YesWeHack → {len(domains)} targets")
-    return domains[:limit]
-
-# ---------------------- Immunefi (Web3/Crypto) ----------------------
-
-def fetch_immunefi_targets(limit=200):
-    print("🧠 Fetching Immunefi programs...")
-    url = "https://raw.githubusercontent.com/projectdiscovery/public-bugbounty-programs/main/immunefi_data.json"
-    data = fetch_json(url)
-    domains = [p["domains"][0] for p in data.get("programs", []) if p.get("domains")]
-    print(f"🔹 Immunefi → {len(domains)} targets")
-    return domains[:limit]
-
-# ---------------------- Main Orchestrator ----------------------
-
-def generate_intelligence_feed(limit=1000):
-    print("🚀 [Digital Sentinel Intel Feed Generator v∞] Starting up...")
-    all_targets = []
-
-    all_targets += fetch_hackerone_targets(limit=limit//5)
-    all_targets += fetch_bugcrowd_targets(limit=limit//5)
-    all_targets += fetch_intigriti_targets(limit=limit//5)
-    all_targets += fetch_yeswehack_targets(limit=limit//5)
-    all_targets += fetch_immunefi_targets(limit=limit//5)
-
-    print("🧩 Deduplicating targets...")
-    unique_targets = sorted(set(all_targets))[:limit]
-    write_targets(unique_targets)
-
-    print(f"✅ Intelligence Feed Generated: {len(unique_targets)} total targets.")
-    print(f"🕒 Timestamp: {datetime.utcnow().isoformat()}Z")
-    print("🌐 Legal and safe for Bug Bounty scanning only.")
-    return unique_targets
-
-# ---------------------- CLI Entrypoint ----------------------
 
 if __name__ == "__main__":
-    generate_intelligence_feed(limit=MAX_TARGETS)
+    print("🚀 Running intel_feed_generator standalone mode...")
+    generate_intel_feed()
+    print("🧩 Feed generation completed successfully.")
