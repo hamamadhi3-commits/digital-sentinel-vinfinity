@@ -3,64 +3,54 @@ import json
 import requests
 from datetime import datetime
 
-# 🧠 Discord webhook sender for Digital Sentinel Quantum Infinity
-# ---------------------------------------------------------------
-# This module sends styled embeds to a Discord channel summarizing
-# the latest scanning cycle, results, and AI analysis.
-
 def send_report(webhook_url: str):
-    """Send scan report summary to Discord."""
+    """Send scan summary report to Discord."""
     try:
-        # Check report files
-        report_summary = "No summary file found."
-        valid_findings = 0
-        urls_processed = 0
-        subdomains_found = 0
-
-        # Load summary or stats if available
-        for candidate in ["results.json", "summary.json", "scan_log.txt"]:
-            if os.path.exists(candidate):
-                with open(candidate, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    report_summary = content[:1500]  # truncate for safety
-                    if "valid findings" in content:
-                        valid_findings = content.count("valid finding")
-                    if "URL" in content:
-                        urls_processed += content.count("http")
-                    if "subdomain" in content:
-                        subdomains_found += content.count(".")
-                    break
-
-        # 🕐 Timestamp
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
-        # 🧠 Embed payload
+        # Find latest JSON report
+        report_path = None
+        for root, dirs, files in os.walk("data/results/final_reports"):
+            for f in sorted(files, reverse=True):
+                if f.endswith(".json"):
+                    report_path = os.path.join(root, f)
+                    break
+            if report_path:
+                break
+
+        summary = "No report summary found."
+        if report_path and os.path.exists(report_path):
+            with open(report_path, "r", encoding="utf-8") as f:
+                data = f.read()
+                summary = data[:1500]  # Limit message size
+        else:
+            print("⚠️ No JSON report found, using fallback summary.")
+
         embed = {
             "title": "🛰 Digital Sentinel Quantum Infinity Report",
             "description": (
                 f"**Cycle completed successfully!**\n\n"
                 f"🕐 Timestamp: `{now}`\n"
-                f"🌐 Subdomains found: **{subdomains_found}**\n"
-                f"🧩 URLs processed: **{urls_processed}**\n"
-                f"🚨 Valid findings: **{valid_findings}**\n\n"
-                f"🧠 AI Summary:\n```{report_summary}```"
+                f"📁 Report File: `{report_path or 'Not found'}`\n\n"
+                f"🧠 AI Summary:\n```{summary}```"
             ),
-            "color": 0x3498db,
-            "footer": {
-                "text": "Digital Sentinel • Quantum Infinity v∞.3",
-            },
+            "color": 0x00AEEF,
+            "footer": {"text": "Digital Sentinel v∞ Quantum Controller"},
             "thumbnail": {
                 "url": "https://i.imgur.com/3Nczd8V.png"
             },
-            "fields": [
-                {"name": "Status", "value": "✅ Operation successful", "inline": True},
-                {"name": "Memory Patterns", "value": "🧬 3 patterns evolved", "inline": True},
-            ],
         }
 
-        # 🚀 Send to Discord
-        response = requests.post(webhook_url, json={"embeds": [embed]})
-        if response.status_code in [200, 204]:
+        files = None
+        # ✅ Upload JSON report as file if exists
+        if report_path and os.path.exists(report_path):
+            files = {"file": open(report_path, "rb")}
+            payload = {"payload_json": json.dumps({"embeds": [embed]})}
+            response = requests.post(webhook_url, data=payload, files=files)
+        else:
+            response = requests.post(webhook_url, json={"embeds": [embed]})
+
+        if response.status_code in (200, 204):
             print(f"✅ Discord report sent successfully at {now}")
         else:
             print(f"⚠️ Failed to send Discord message ({response.status_code}): {response.text}")
@@ -69,10 +59,9 @@ def send_report(webhook_url: str):
         print(f"❌ Error sending report: {e}")
 
 
-# Manual test entry point
 if __name__ == "__main__":
     webhook = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
-    if not webhook:
-        print("⚠️ No DISCORD_WEBHOOK_URL provided.")
-    else:
+    if webhook:
         send_report(webhook)
+    else:
+        print("⚠️ No DISCORD_WEBHOOK_URL provided.")
