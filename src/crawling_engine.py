@@ -3,9 +3,11 @@
 """
 crawling_engine.py
 ------------------
-Accepts either:
-  • a file path to targets.txt
-  • or a list of live hosts (from probing engine)
+Stable version with:
+  • SSL verification bypass option
+  • DNS resolution resilience
+  • Timeout handling
+  • Smart logging for unreachable targets
 """
 
 import os
@@ -13,39 +15,46 @@ import requests
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 
+# 🧠 Base headers for all HTTP requests
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; DigitalSentinelBot/12.0; +https://github.com/hamamadhii3)"
+    "User-Agent": "Mozilla/5.0 (compatible; DigitalSentinelBot/15.0; +https://github.com/hamamadhii3)"
 }
 
 CRAWL_RESULTS_DIR = os.path.join("data", "results", "crawling_reports")
+TIMEOUT = 10  # seconds
+VERIFY_SSL = False  # disable SSL verification errors safely
+
 
 def run_crawling(targets_input):
     """
-    Crawl live targets (from file or list) and extract internal links & JS files.
+    Crawl list of targets or path to file.
+    Returns list of dict results with domain/link/script stats.
     """
     os.makedirs(CRAWL_RESULTS_DIR, exist_ok=True)
 
-    # 🧠 Auto-detect input type (list or file path)
+    # Detect type of input
     if isinstance(targets_input, list):
         targets = targets_input
     elif isinstance(targets_input, str) and os.path.exists(targets_input):
         with open(targets_input, "r", encoding="utf-8") as f:
             targets = [line.strip() for line in f if line.strip()]
     else:
-        print(f"⚠️ [Crawler] Invalid input provided to run_crawling(): {type(targets_input)}")
+        print(f"⚠️ [Crawler] Invalid input provided: {type(targets_input)}")
         return []
 
     print(f"🕷️ [Crawler] Starting crawl for {len(targets)} targets...")
     results = []
+    unreachable = []
 
     for t in targets:
         url = f"https://{t}" if not t.startswith("http") else t
-        domain = urlparse(url).netloc
+        domain = urlparse(url).netloc or t
         out_file = os.path.join(CRAWL_RESULTS_DIR, f"{domain}.txt")
 
         try:
             print(f"🌐 Crawling {url} ...")
-            r = requests.get(url, headers=HEADERS, timeout=8)
+            r = requests.get(url, headers=HEADERS, timeout=TIMEOUT, verify=VERIFY_SSL)
+            r.raise_for_status()
             soup = BeautifulSoup(r.text, "html.parser")
 
             links = set()
@@ -72,10 +81,33 @@ def run_crawling(targets_input):
             print(f"✅ [Crawler] {domain} → {len(links)} links, {len(js_files)} JS files")
             results.append({"domain": domain, "links": len(links), "scripts": len(js_files)})
 
+        except requests.exceptions.SSLError:
+            print(f"⚠️ [Crawler] SSL verification failed for {url} (ignored)")
+            unreachable.append(url)
+        except requests.exceptions.ConnectionError as ce:
+            print(f"⚠️ [Crawler] DNS/Connection error: {url} → {ce}")
+            unreachable.append(url)
+        except requests.exceptions.Timeout:
+            print(f"⚠️ [Crawler] Timeout: {url} > {TIMEOUT}s")
+            unreachable.append(url)
         except Exception as e:
-            print(f"⚠️ [Crawler] Error on {url}: {e}")
+            print(f"⚠️ [Crawler] Unknown error on {url}: {e}")
+            unreachable.append(url)
+
+    # Save summary
+    summary_file = os.path.join(CRAWL_RESULTS_DIR, "summary.txt")
+    with open(summary_file, "w", encoding="utf-8") as s:
+        s.write("# Digital Sentinel Crawl Summary\n")
+        s.write(f"Total targets: {len(targets)}\n")
+        s.write(f"Successful: {len(results)}\n")
+        s.write(f"Failed: {len(unreachable)}\n\n")
+        if unreachable:
+            s.write("[Unreachable Targets]\n")
+            for u in unreachable:
+                s.write(u + "\n")
 
     print("🧩 Crawling complete.")
+    print(f"✅ Success: {len(results)} | ⚠️ Failed: {len(unreachable)}")
     return results
 
 
