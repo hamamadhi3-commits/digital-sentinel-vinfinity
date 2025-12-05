@@ -8,13 +8,12 @@ def send_report(webhook_url: str):
     try:
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
 
-        # 🔍 Find latest JSON report file
+        # Find latest JSON report
         report_path = None
-        for root, dirs, files in os.walk("data/results/final_reports"):
+        for root, _, files in os.walk("data/results/final_reports"):
             json_files = [f for f in files if f.endswith(".json")]
             if json_files:
-                latest = sorted(json_files, reverse=True)[0]
-                report_path = os.path.join(root, latest)
+                report_path = os.path.join(root, sorted(json_files, reverse=True)[0])
                 break
 
         summary = "No summary file found."
@@ -23,13 +22,12 @@ def send_report(webhook_url: str):
                 data = f.read()
                 summary = data[:1500] if len(data) > 0 else "Empty report."
 
-        # 🧠 Discord embed
         embed = {
             "title": "🛰 Digital Sentinel Quantum Infinity Report",
             "description": (
                 f"**Cycle completed successfully!**\n\n"
                 f"🕐 **Timestamp:** `{now}`\n"
-                f"🌐 **Report File:** `{os.path.basename(report_path) if report_path else 'Not found'}`\n\n"
+                f"📄 **Report File:** `{os.path.basename(report_path) if report_path else 'Not found'}`\n\n"
                 f"🧠 **AI Summary:**\n```{summary}```"
             ),
             "color": 0x007BFF,
@@ -40,12 +38,12 @@ def send_report(webhook_url: str):
             ],
         }
 
-        files = None
+        # Upload the report file as an attachment if it exists
         if report_path and os.path.exists(report_path):
-            # ✅ Attach JSON report file to Discord
-            files = {"file": open(report_path, "rb")}
-            payload = {"payload_json": json.dumps({"embeds": [embed]})}
-            response = requests.post(webhook_url, data=payload, files=files)
+            with open(report_path, "rb") as f:
+                files = {"file": (os.path.basename(report_path), f, "application/json")}
+                payload = {"payload_json": json.dumps({"embeds": [embed]})}
+                response = requests.post(webhook_url, data=payload, files=files)
         else:
             response = requests.post(webhook_url, json={"embeds": [embed]})
 
