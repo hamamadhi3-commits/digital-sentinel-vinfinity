@@ -5,48 +5,47 @@ on:
 jobs:
   eternal-hunter:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # 6 hours max runtime
+    timeout-minutes: 360   # 6 hours
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
     steps:
       - name: 🧠 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python Environment
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 📦 Install Dependencies
+      - name: 📦 Install Requirements
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt || true
-          echo "✅ Dependencies installed"
+          echo "✅ Python dependencies installed."
 
-      - name: 🧩 Ensure src Package Initialization
+      - name: 🧩 Ensure src is a Package
         run: |
           if [ ! -f "src/__init__.py" ]; then
-            echo "⚙️ Creating missing __init__.py inside src/"
+            echo "⚙️ Creating __init__.py"
             touch src/__init__.py
-          else
-            echo "✅ src/__init__.py already exists"
           fi
+          echo "✅ src initialized."
 
-      - name: 🔧 Fix Python Import Path
+      - name: 🔧 Fix PYTHONPATH
         run: |
-          echo "🔧 Adding current path to PYTHONPATH"
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          echo "PYTHONPATH=$PYTHONPATH" >> $GITHUB_ENV
-          echo "✅ PYTHONPATH fixed"
+          echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+          echo "✅ PYTHONPATH fixed."
 
-      - name: 🧠 Detect Quantum Core
+      - name: 🔍 Detect Quantum Core
+        id: detect_core
         run: |
-          echo "🔍 Checking for quantum_immortal_loop.py..."
           if [ -f "src/quantum_immortal_loop.py" ]; then
             echo "core=src/quantum_immortal_loop.py" >> $GITHUB_ENV
-            echo "🌀 Quantum Immortal Loop found!"
+            echo "🌀 Core detected: quantum_immortal_loop.py"
           else
             echo "core=src/main_controller_v11_4_quantum.py" >> $GITHUB_ENV
-            echo "⚙️ Defaulting to main_controller_v11_4_quantum.py"
+            echo "⚙️ Fallback: main_controller_v11_4_quantum.py"
           fi
 
       - name: 🚀 Launch Eternal Quantum Intelligence
@@ -54,25 +53,25 @@ jobs:
           echo "🚀 Running core: $core"
           chmod +x $core
           python3 $core || (
-            echo "⚠️ Crash detected, retrying in 30 seconds..." && sleep 30 && python3 $core
+            echo "⚠️ Crash detected — retrying once after 30s..." && sleep 30 && python3 $core
           )
 
-      - name: 📡 Dispatch Discord Report
+      - name: 📡 Send Discord Report
         if: always()
         run: |
-          echo "📡 Sending summary report to Discord (if configured)..."
-          if [ -f "src/discord_reporter.py" ]; then
-            python3 src/discord_reporter.py || echo "⚠️ Discord reporting failed, skipping..."
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            echo "📨 Sending report to Discord..."
+            python3 src/discord_reporter.py "$DISCORD_WEBHOOK_URL" || echo "⚠️ Discord send failed."
           else
-            echo "⚠️ discord_reporter.py not found, skipping Discord stage."
+            echo "⚠️ No Discord webhook configured."
           fi
 
-      - name: 📁 Archive Reports
+      - name: 🧾 Archive Reports
         if: always()
         run: |
           mkdir -p artifacts
           find . -type f -name "*.log" -o -name "*.txt" -o -name "*.json" | tar -czf artifacts/reports.tar.gz -T -
-          echo "📦 Reports archived"
+          echo "📦 Reports archived."
 
       - name: 📤 Upload Reports
         if: always()
@@ -81,7 +80,9 @@ jobs:
           name: digital-sentinel-reports
           path: artifacts/
 
-      - name: ♾️ Quantum Continuity Loop
+      - name: ♾️ Self-Restart (Quantum Regeneration Loop)
         if: always()
         run: |
-          echo "♾️ Eternal Quantum Loop complete. System ready for next cycle."
+          echo "♻️ Quantum Cycle Complete — restarting in 30 seconds..."
+          sleep 30
+          gh workflow run sentinel-autonomous-vinfinity.yml || echo "⚠️ Auto-restart failed."
