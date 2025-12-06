@@ -3,7 +3,7 @@ name: Sentinel Autonomous Infinity Engine
 on:
   schedule:
     - cron: "0 */6 * * *"   # ⏱ هەر 6 کاژمێر جارێک خۆکارانە دەستپێدەکات
-  workflow_dispatch:        # دەستکردی بەدەستی تۆ
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -11,7 +11,9 @@ on:
 jobs:
   sentinel-core:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # ⏱ سنووری 6 کاژمێر
+    timeout-minutes: 360  # ⏱ 6 کاژمێر
+    permissions:
+      contents: write    # ⬅️ پێویستە بۆ gh workflow run
 
     steps:
       - name: Checkout repository
@@ -34,6 +36,8 @@ jobs:
 
       - name: Re-trigger workflow after completion
         if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "♻️ Restarting workflow automatically..."
           gh workflow run "Sentinel Autonomous Infinity Engine"
