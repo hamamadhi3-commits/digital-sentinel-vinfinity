@@ -1,68 +1,75 @@
 """
-Digital Sentinel - Crawling Engine
-==================================
-This module crawls alive targets discovered in the probing phase.
-It collects links and JavaScript endpoints for deeper analysis.
+Digital Sentinel - HTTP Probing Engine
+======================================
+Checks which targets are alive by probing HTTP/HTTPS responses.
 """
 
 import os
 import requests
-from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Paths
+# ✅ Ensure output directories exist
 SRC_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 DATA_PATH = os.path.join(SRC_PATH, "data")
-INPUT_FILE = os.path.join(DATA_PATH, "cache", "validated", "alive_hosts.txt")
-OUTPUT_FILE = os.path.join(DATA_PATH, "cache", "crawled", "urls.txt")
+TARGETS_FILE = os.path.join(DATA_PATH, "targets.txt")
+OUTPUT_DIR = os.path.join(DATA_PATH, "cache", "validated")
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, "alive_hosts.txt")
 
 
-def crawl_target(target: str, depth: int = 1):
-    """Fetch and parse links from the target's homepage."""
-    urls = set()
-    base_url = f"https://{target}"
+def probe_url(domain: str, timeout: int = 5) -> bool:
+    """Try to connect via HTTP or HTTPS and check if site is alive."""
     try:
-        r = requests.get(base_url, timeout=8, verify=False)
-        soup = BeautifulSoup(r.text, "html.parser")
-        for link in soup.find_all("a", href=True):
-            href = link["href"]
-            if href.startswith("http"):
-                urls.add(href)
-            elif href.startswith("/"):
-                urls.add(base_url + href)
-    except Exception as e:
-        print(f"⚠️ Crawl failed for {target}: {e}")
-    return urls
+        resp = requests.get(f"http://{domain}", timeout=timeout)
+        if resp.status_code < 400:
+            return True
+    except Exception:
+        pass
+    try:
+        resp = requests.get(f"https://{domain}", timeout=timeout, verify=False)
+        return resp.status_code < 400
+    except Exception:
+        return False
 
 
-def run_crawling():
-    """Main crawling entry point."""
-    print("🕸️ [Phase 3: Crawling Engine Started]")
+def run_probing():
+    """Main orchestrator function — called from main_controller."""
+    print("🚀 [Phase 2: HTTP Probing Started]")
 
-    if not os.path.exists(INPUT_FILE):
-        print(f"⚠️ No alive hosts found at {INPUT_FILE}")
+    if not os.path.exists(TARGETS_FILE):
+        print(f"⚠️ Target list not found at {TARGETS_FILE}")
         return
 
-    with open(INPUT_FILE, "r") as f:
-        targets = [line.strip() for line in f if line.strip()]
+    with open(TARGETS_FILE, "r") as f:
+        targets = [t.strip() for t in f if t.strip()]
 
-    all_urls = set()
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        futures = {executor.submit(crawl_target, t): t for t in targets}
+    if not targets:
+        print("⚠️ No targets found in file.")
+        return
+
+    alive = []
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(probe_url, t): t for t in targets}
         for future in as_completed(futures):
-            target = futures[future]
+            t = futures[future]
             try:
-                urls = future.result()
-                all_urls.update(urls)
-                print(f"✅ Crawled {len(urls)} URLs from {target}")
+                if future.result():
+                    print(f"✅ Alive: {t}")
+                    alive.append(t)
+                else:
+                    print(f"❌ Dead: {t}")
             except Exception as e:
-                print(f"⚠️ Error crawling {target}: {e}")
+                print(f"⚠️ Error probing {t}: {e}")
 
-    # Save results
-    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-    with open(OUTPUT_FILE, "w") as f:
-        for url in sorted(all_urls):
-            f.write(url + "\n")
+    # ✅ Save alive targets
+    with open(OUTPUT_FILE, "w") as out:
+        out.write("\n".join(alive))
 
-    print(f"\n💾 Saved {len(all_urls)} URLs to {OUTPUT_FILE}")
-    print("🔚 [Phase 3 Completed - Crawling Engine]\n")
+    print(f"\n💾 {len(alive)} alive hosts saved to {OUTPUT_FILE}")
+    print("🔚 [Phase 2: HTTP Probing Completed]\n")
+
+
+# 👇 make sure this exists to allow import
+if __name__ == "__main__":
+    run_probing()
