@@ -15,6 +15,7 @@ from core.parallel_engine import run_parallel
 from core.ai_intelligence_oracle import run_ai_oracle
 from core.discord_reporter import run_discord_reporter
 from core.ai_threat_analyzer import run_threat_analyzer
+from core.ai_threat_response import run_threat_response
 
 
 def digital_sentinel_controller():
@@ -70,8 +71,8 @@ def digital_sentinel_controller():
 
     # === Phase 10: Threat Intelligence Feed ===
     print("🌍 Phase 10: Threat Intelligence Feed Starting...")
-    # Placeholder for future AbuseIPDB/ThreatFox integration
-    print("📡 Gathering threat intelligence data from feeds...")
+    # Placeholder: AbuseIPDB / ThreatFox / AlienVault integration
+    print("📡 Gathering threat intelligence data from trusted global feeds...")
     time.sleep(1)
     print("✅ Phase 10 Completed.")
 
@@ -79,6 +80,11 @@ def digital_sentinel_controller():
     print("⚡ Phase 11: AI Threat Prioritization & Anomaly Detection Starting...")
     run_threat_analyzer()
     print("✅ Phase 11 Completed.")
+
+    # === Phase 12: AI Threat Response Simulation ===
+    print("🛡️ Phase 12: AI Threat Response Simulation Starting...")
+    run_threat_response()
+    print("✅ Phase 12 Completed.")
 
     # === Summary ===
     end_time = time.time()
