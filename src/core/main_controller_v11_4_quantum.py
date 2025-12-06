@@ -3,20 +3,19 @@ import sys
 import json
 from datetime import datetime
 
-# Ensure import path includes /src
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# make sure current dir (core) is in sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# === Core Engines ===
-from core.enumeration_engine import run_enumeration
-from core.probing_engine import run_probing
-from core.crawling_engine import run_crawling
-from core.vulnerability_scanner import run_vulnerability_scan
-from core.export_bugcrowd import export_bugcrowd
-from core.validator import validate_targets
-from core.parallel_engine import run_parallel
+from enumeration_engine import run_enumeration
+from probing_engine import run_probing
+from crawling_engine import run_crawling
+from vulnerability_scanner import run_vulnerability_scan
+from export_bugcrowd import export_bugcrowd
+from validator import validate_targets
+from parallel_engine import run_parallel
 
 try:
-    from ai.ai_analyzer import analyze_results
+    from ai_analyzer import analyze_results
     AI_AVAILABLE = True
 except ImportError:
     AI_AVAILABLE = False
