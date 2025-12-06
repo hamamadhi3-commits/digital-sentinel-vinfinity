@@ -6,16 +6,16 @@ on:
     branches:
       - main
   schedule:
-    - cron: "0 */6 * * *"   # ⏰ rerun every 6 hours automatically
+    - cron: "0 */6 * * *"   # 🔁 Runs automatically every 6 hours
 
 jobs:
   sentinel-core:
     runs-on: ubuntu-latest
     steps:
-      - name: 🧠 Set up job
-        run: echo "🚀 Launching Digital Sentinel Infinity Engine..."
+      - name: 🧠 Initialize
+        run: echo "🚀 Launching Digital Sentinel Autonomous Infinity Engine..."
 
-      - name: 🔄 Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
       - name: 🐍 Set up Python
@@ -28,16 +28,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: ⚡ Run Digital Sentinel Parallel Engine
+      - name: ⚡ Run Digital Sentinel Infinity Engine
         run: python3 src/core/main_controller_v11_4_quantum.py
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      - name: ♻️ Re-trigger workflow after completion
+      - name: 🧹 Cleanup
         if: always()
-        run: |
-          echo "🔁 Restarting workflow automatically..."
-          gh workflow run sentinel-autonomous-vinfinity.yml
-        env:
-          GH_TOKEN: ${{ github.token }}
+        run: echo "✅ Sentinel Infinity cycle completed successfully."
