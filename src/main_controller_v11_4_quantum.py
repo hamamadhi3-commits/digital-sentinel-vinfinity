@@ -1,88 +1,76 @@
-# src/main_controller_v11_4_quantum.py
 import os
 import time
+import json
 from datetime import datetime
-from src.enumeration_engine import run_enumeration
-from src.probing_engine import run_probing
-from src.crawling_engine import run_crawling
-from src.discord_reporter import DiscordReporter
-from src.core.intel_feed_generator import generate_intel_feed
 
-# 🧠 NEW AI Intelligence Layers
-from src.ai.ai_intel_brain import AIIntelBrain
-from src.ai.discord_ai_reporter import DiscordAIReporter
+# === Core Engines ===
+from src.core.enumeration_engine import run_enumeration
+from src.core.probing_engine import run_probing
+from src.core.crawling_engine import run_crawling
+from src.core.vulnerability_scanner import run_vulnerability_scan
+from src.core.export_bugcrowd import export_to_bugcrowd
+from src.core.validator import validate_targets
+from src.core.parallel_engine import run_parallel_engine
+
+# === AI & Intelligence Modules ===
+from src.ai.ai_auto_triage import analyze_findings, send_to_discord
+from src.ai.intel_memory_oracle import update_memory
 
 
 def digital_sentinel_controller():
-    print("♾️ Digital Sentinel Quantum Controller initiated.")
-    
-    # Intelligence feed
-    print("🧠 Refreshing intelligence feed (Bug Bounty targets)...")
-    try:
-        generate_intel_feed()
-    except Exception as e:
-        print(f"⚠️ [Intel] Failed to refresh targets automatically: {e}")
+    print("🚀 [Digital Sentinel vInfinity Engine] Starting autonomous cycle...")
+    start_time = time.time()
 
-    # Enumeration
-    print("🔎 Starting Enumeration Engine...")
+    # === 1️⃣ Load and validate targets ===
     targets_file = "data/targets.txt"
     if not os.path.exists(targets_file):
-        print("❌ No targets file found.")
+        print("❌ No targets.txt found.")
         return
+    validated_targets = validate_targets(targets_file)
+    print(f"✅ {len(validated_targets)} targets validated.")
 
-    with open(targets_file, "r") as f:
-        targets = [line.strip() for line in f if line.strip()]
+    # === 2️⃣ Enumeration + Probing (Parallel) ===
+    print("🕵️ Running parallel enumeration and probing...")
+    enumerated_data = run_parallel_engine(validated_targets, run_enumeration)
+    probed_data = run_parallel_engine(enumerated_data, run_probing)
+    print("✅ Enumeration & probing completed.")
 
-    print(f"📥 Loaded {len(targets)} targets from {targets_file}")
-    subdomains = run_enumeration(targets)
-    print(f"✅ Enumeration phase complete. Found {len(subdomains)} subdomains.")
-    
-    # Probing
-    print("📡 Running Probing Engine...")
-    alive_hosts = run_probing(subdomains)
-    print(f"✅ Probing complete — {len(alive_hosts)} live domains active.")
-    
-    # Crawling
-    print("🕷️ Activating Crawling Engine...")
-    try:
-        crawled_data = run_crawling(alive_hosts)
-    except Exception as e:
-        print(f"💥 Controller crashed during crawling: {e}")
-        crawled_data = []
+    # === 3️⃣ Crawling + Vulnerability Scanning ===
+    print("🧭 Running web crawling and vulnerability scanning...")
+    crawled_data = run_parallel_engine(probed_data, run_crawling)
+    vulns_data = run_parallel_engine(crawled_data, run_vulnerability_scan)
+    print("✅ Crawling and scanning completed.")
 
-    # === AI INTELLIGENCE MODULE ===
-    print("🧠 AI Intelligence Analysis starting...")
-    brain = AIIntelBrain()
-    ai = DiscordAIReporter()
+    # === 4️⃣ Export results to structured format ===
+    export_path = "data/results/final_reports/"
+    os.makedirs(export_path, exist_ok=True)
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    report_file = os.path.join(export_path, f"report_{timestamp}.json")
 
-    for target in alive_hosts[:10]:  # limit per cycle for efficiency
-        fake_report = f"Scan result summary for {target} | {len(crawled_data)} pages analyzed."
-        ai_result = brain.analyze_vulnerabilities(fake_report)
-        ai.send_ai_report(target, ai_result)
+    with open(report_file, "w") as f:
+        json.dump(vulns_data, f, indent=2)
+    print(f"📦 Results saved to: {report_file}")
 
-    print("✅ AI Intelligence & Reporting phase complete.")
+    # === 5️⃣ Export to Bugcrowd-compatible format ===
+    export_to_bugcrowd(vulns_data)
 
-    # Discord reporting (legacy summary)
-    try:
-        DiscordReporter().send_message(f"✅ Quantum cycle completed ({len(alive_hosts)} live targets).")
-    except Exception as e:
-        print(f"⚠️ Discord Reporter Error: {e}")
+    # === 6️⃣ AI Auto-Triage (OpenAI GPT integration) ===
+    print("🤖 Running AI Auto-Triage & Report Summarization...")
+    triage_summaries = analyze_findings()
+    if triage_summaries:
+        send_to_discord(triage_summaries)
+        update_memory(triage_summaries)
+        print("🧠 AI triage and memory update complete.")
+    else:
+        print("⚠️ No findings to triage.")
 
-    print("✅ Quantum Controller completed execution.")
-
-
-def quantum_infinity_loop():
-    cycle = 0
-    while True:
-        cycle += 1
-        print(f"🚀 [Quantum-∞] Cycle start @ {datetime.now()}")
-        digital_sentinel_controller()
-        print(f"✅ [Quantum-∞] Cycle complete")
-        wait_time = 6 * 60 * 60  # 6 hours
-        print(f"⏱ Waiting {wait_time/3600:.0f} hours before next evolution cycle ({cycle} total)")
-        time.sleep(wait_time)
+    # === 7️⃣ Finish Cycle ===
+    elapsed = time.time() - start_time
+    print(f"🏁 Digital Sentinel cycle completed in {elapsed:.2f}s.")
 
 
 if __name__ == "__main__":
-    print("♾️ Digital Sentinel Quantum Immortal Loop — ACTIVE")
-    quantum_infinity_loop()
+    try:
+        digital_sentinel_controller()
+    except Exception as e:
+        print("💥 Fatal error in main controller:", str(e))
