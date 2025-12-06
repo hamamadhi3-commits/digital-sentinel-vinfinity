@@ -1,1 +1,1 @@
-# Makes core a Python package
+# marks core as a Python package
