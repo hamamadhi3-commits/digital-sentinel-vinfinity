@@ -11,9 +11,9 @@ on:
 jobs:
   sentinel-core:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # ⏱ 6 کاژمێر
+    timeout-minutes: 360
     permissions:
-      contents: write    # ⬅️ پێویستە بۆ gh workflow run
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -33,11 +33,3 @@ jobs:
         run: |
           echo "🚀 Starting Quantum Infinity Engine..."
           python src/core/parallel_engine.py
-
-      - name: Re-trigger workflow after completion
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "♻️ Restarting workflow automatically..."
-          gh workflow run "Sentinel Autonomous Infinity Engine"
