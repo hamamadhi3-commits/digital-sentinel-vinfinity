@@ -1,86 +1,96 @@
+"""
+Digital Sentinel - Quantum Infinity Controller v11.4
+====================================================
+Core orchestration layer of the Sentinel system.
+This script coordinates all scanning phases:
+1. Enumeration
+2. Probing
+3. Crawling
+4. Vulnerability Scanning
+5. Validation
+6. Bugcrowd Export
+7. Parallel Intelligence Sync
+"""
+
 import os
 import sys
-import json
+import time
 from datetime import datetime
 
-# Make sure current folder is in path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from enumeration_engine import run_enumeration
-from probing_engine import run_probing
-from crawling_engine import run_crawling
-from vulnerability_scanner import run_vulnerability_scan
-from export_bugcrowd import export_bugcrowd
-from validator import validate_targets
-from parallel_engine import run_parallel
-
-try:
-    from ai_analyzer import analyze_results
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-
-try:
-    from discord_reporter import send_discord_message
-    DISCORD_ENABLED = True
-except ImportError:
-    DISCORD_ENABLED = False
+# ✅ Correct imports after moving modules inside /core
+from core.enumeration_engine import run_enumeration
+from core.probing_engine import run_probing
+from core.crawling_engine import run_crawling
+from core.vulnerability_scanner import run_vulnerability_scan
+from core.export_bugcrowd import export_bugcrowd
+from core.validator import validate_targets
+from core.parallel_engine import run_parallel
 
 
-def log_event(stage, msg):
-    print(f"[{datetime.utcnow().strftime('%H:%M:%S')}] [{stage}] {msg}")
+# ==============================================================
+# GLOBAL PATHS & CONFIGURATION
+# ==============================================================
+
+ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+DATA_PATH = os.path.join(ROOT_PATH, "data")
+TARGETS_FILE = os.path.join(DATA_PATH, "targets.txt")
+
+print("🌐 [Quantum Infinity Controller v11.4]")
+print("📁 Working Directory:", ROOT_PATH)
+print("🧠 Starting Autonomous Pipeline...\n")
 
 
-def save_report(data, filename="sentinel_report.json"):
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=4)
-    log_event("REPORT", f"Saved report to {filename}")
-
+# ==============================================================
+# EXECUTION PIPELINE
+# ==============================================================
 
 def main():
-    log_event("SYSTEM", "🚀 Digital Sentinel Infinity Engine started")
+    start_time = datetime.now()
 
     try:
-        targets = validate_targets()
-        log_event("VALIDATION", f"✅ {len(targets)} targets validated")
+        # 1️⃣ ENUMERATION PHASE
+        print("🚀 Phase 1: Enumeration Engine Starting...")
+        run_enumeration(TARGETS_FILE)
+        print("✅ Phase 1 Completed.\n")
 
-        enum_data = run_enumeration(targets)
-        log_event("ENUMERATION", "✅ Enumeration done")
+        # 2️⃣ PROBING PHASE
+        print("🔎 Phase 2: HTTP Probing in Progress...")
+        run_probing()
+        print("✅ Phase 2 Completed.\n")
 
-        live_hosts = run_probing(enum_data)
-        log_event("PROBING", f"✅ {len(live_hosts)} live hosts")
+        # 3️⃣ CRAWLING PHASE
+        print("🕸️ Phase 3: Web Crawling Initiated...")
+        run_crawling()
+        print("✅ Phase 3 Completed.\n")
 
-        crawled = run_crawling(live_hosts)
-        log_event("CRAWLING", "✅ Crawling finished")
+        # 4️⃣ SCANNING PHASE
+        print("💣 Phase 4: Vulnerability Scanning Executing...")
+        run_vulnerability_scan()
+        print("✅ Phase 4 Completed.\n")
 
-        vulns = run_vulnerability_scan(crawled)
-        log_event("SCANNER", "✅ Vulnerability scan complete")
+        # 5️⃣ VALIDATION PHASE
+        print("🧩 Phase 5: Validating Discovered Assets...")
+        validate_targets()
+        print("✅ Phase 5 Completed.\n")
 
-        aggregated = run_parallel([targets, enum_data, live_hosts, vulns])
-        log_event("PARALLEL", "✅ Aggregation done")
+        # 6️⃣ EXPORT PHASE
+        print("📤 Phase 6: Exporting Results to Bugcrowd Format...")
+        export_bugcrowd()
+        print("✅ Phase 6 Completed.\n")
 
-        ai_summary = analyze_results(aggregated) if AI_AVAILABLE else {}
-        export_bugcrowd(aggregated)
+        # 7️⃣ PARALLEL INTELLIGENCE SYNC
+        print("🤖 Phase 7: Parallel Intelligence Synchronization...")
+        run_parallel()
+        print("✅ Phase 7 Completed.\n")
 
-        save_report({
-            "targets": targets,
-            "enumerated": enum_data,
-            "live_hosts": live_hosts,
-            "vulnerabilities": vulns,
-            "ai_summary": ai_summary,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-
-        if DISCORD_ENABLED:
-            send_discord_message("✅ Digital Sentinel Infinity completed successfully")
-
-        log_event("SYSTEM", "🎯 Mission complete")
+        end_time = datetime.now()
+        total = (end_time - start_time).total_seconds() / 60.0
+        print(f"🎯 Digital Sentinel Quantum Infinity completed in {total:.2f} minutes.")
 
     except Exception as e:
-        log_event("ERROR", f"❌ {e}")
-        if DISCORD_ENABLED:
-            send_discord_message(f"❌ Error: {e}")
-        raise
+        print("❌ FATAL ERROR OCCURRED!")
+        print(e)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
