@@ -26,7 +26,6 @@ jobs:
 
       - name: ⚙️ Run Digital Sentinel Infinity Engine
         run: |
-          cd src
-          export PYTHONPATH=$(pwd)
-          echo "Current directory: $(pwd)"
-          python3 core/main_controller_v11_4_quantum.py
+          export PYTHONPATH=$PWD/src
+          echo "PYTHONPATH = $PYTHONPATH"
+          python3 src/core/main_controller_v11_4_quantum.py
