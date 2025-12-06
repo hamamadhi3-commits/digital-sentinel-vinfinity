@@ -26,8 +26,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: ⚙️ Run Digital Sentinel Infinity Engine
-        working-directory: ./src
         run: |
+          cd src
           echo "PWD: $(pwd)"
-          export PYTHONPATH=$(pwd)
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
           python3 core/main_controller_v11_4_quantum.py
