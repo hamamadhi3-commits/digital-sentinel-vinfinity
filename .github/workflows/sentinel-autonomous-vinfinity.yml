@@ -1,88 +1,39 @@
-name: sentinel-autonomous-vinfinity
+name: Sentinel Autonomous Infinity Engine
+
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"   # ⏱ هەر 6 کاژمێر جارێک خۆکارانە دەستپێدەکات
+  workflow_dispatch:        # دەستکردی بەدەستی تۆ
+  push:
+    branches:
+      - main
 
 jobs:
-  eternal-hunter:
+  sentinel-core:
     runs-on: ubuntu-latest
-    timeout-minutes: 360   # 6 hours
-    env:
-      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    timeout-minutes: 360  # ⏱ سنووری 6 کاژمێر
 
     steps:
-      - name: 🧠 Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: 📦 Install Requirements
+      - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt || true
-          echo "✅ Python dependencies installed."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: 🧩 Ensure src is a Package
+      - name: Run Digital Sentinel Parallel Engine
         run: |
-          if [ ! -f "src/__init__.py" ]; then
-            echo "⚙️ Creating __init__.py"
-            touch src/__init__.py
-          fi
-          echo "✅ src initialized."
+          echo "🚀 Starting Quantum Infinity Engine..."
+          python src/core/parallel_engine.py
 
-      - name: 🔧 Fix PYTHONPATH
-        run: |
-          echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
-          echo "✅ PYTHONPATH fixed."
-
-      - name: 🔍 Detect Quantum Core
-        id: detect_core
-        run: |
-          if [ -f "src/quantum_immortal_loop.py" ]; then
-            echo "core=src/quantum_immortal_loop.py" >> $GITHUB_ENV
-            echo "🌀 Core detected: quantum_immortal_loop.py"
-          else
-            echo "core=src/main_controller_v11_4_quantum.py" >> $GITHUB_ENV
-            echo "⚙️ Fallback: main_controller_v11_4_quantum.py"
-          fi
-
-      - name: 🚀 Launch Eternal Quantum Intelligence
-        run: |
-          echo "🚀 Running core: $core"
-          chmod +x $core
-          python3 $core || (
-            echo "⚠️ Crash detected — retrying once after 30s..." && sleep 30 && python3 $core
-          )
-
-      - name: 📡 Send Discord Report
+      - name: Re-trigger workflow after completion
         if: always()
         run: |
-          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
-            echo "📨 Sending report to Discord..."
-            python3 src/discord_reporter.py "$DISCORD_WEBHOOK_URL" || echo "⚠️ Discord send failed."
-          else
-            echo "⚠️ No Discord webhook configured."
-          fi
-
-      - name: 🧾 Archive Reports
-        if: always()
-        run: |
-          mkdir -p artifacts
-          find . -type f -name "*.log" -o -name "*.txt" -o -name "*.json" | tar -czf artifacts/reports.tar.gz -T -
-          echo "📦 Reports archived."
-
-      - name: 📤 Upload Reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: digital-sentinel-reports
-          path: artifacts/
-
-      - name: ♾️ Self-Restart (Quantum Regeneration Loop)
-        if: always()
-        run: |
-          echo "♻️ Quantum Cycle Complete — restarting in 30 seconds..."
-          sleep 30
-          gh workflow run sentinel-autonomous-vinfinity.yml || echo "⚠️ Auto-restart failed."
+          echo "♻️ Restarting workflow automatically..."
+          gh workflow run "Sentinel Autonomous Infinity Engine"
