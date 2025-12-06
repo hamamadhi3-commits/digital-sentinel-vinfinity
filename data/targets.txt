@@ -1,1 +1,16 @@
-
+paypal.com
+spotify.com
+bugcrowd.com
+google.com
+yeswehack.com
+tesla.com
+amazon.com
+apple.com
+dropbox.com
+adobe.com
+microsoft.com
+intel.com
+hackerone.com
+example1.com
+example2.com
+...
