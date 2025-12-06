@@ -1,10 +1,10 @@
 name: Sentinel Autonomous Infinity
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   sentinel-core:
@@ -26,6 +26,6 @@ jobs:
 
       - name: ⚙️ Run Digital Sentinel Infinity Engine
         run: |
-          export PYTHONPATH=$PWD/src
-          echo "PYTHONPATH = $PYTHONPATH"
-          python3 src/core/main_controller_v11_4_quantum.py
+          cd src/core
+          echo "Running in $(pwd)"
+          python3 main_controller_v11_4_quantum.py
