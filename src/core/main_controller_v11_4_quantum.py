@@ -4,73 +4,89 @@ import json
 from datetime import datetime
 
 # === Core Engines ===
-from src.core.enumeration_engine import run_enumeration
-from src.core.probing_engine import run_probing
-from src.core.crawling_engine import run_crawling
-from src.core.vulnerability_scanner import run_vulnerability_scan
-from src.core.export_bugcrowd import export_to_bugcrowd
-from src.core.validator import validate_targets
-from src.core.parallel_engine import run_parallel_engine
-
-# === AI & Intelligence Modules ===
-from src.ai.ai_auto_triage import analyze_findings, send_to_discord
-from src.ai.intel_memory_oracle import update_memory
+from core.enumeration_engine import run_enumeration
+from core.probing_engine import run_probing
+from core.crawling_engine import run_crawling
+from core.vulnerability_scanner import run_vulnerability_scan
+from core.export_bugcrowd import export_results
+from core.validator import validate_results
+from core.parallel_engine import run_parallel_tasks
 
 
-def digital_sentinel_controller():
-    print("🚀 [Digital Sentinel vInfinity Engine] Starting autonomous cycle...")
-    start_time = time.time()
+# === Digital Sentinel | Quantum Controller v11.4 ===
+class QuantumSentinelController:
+    def __init__(self):
+        self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.report_dir = f"reports/{self.session_id}"
+        os.makedirs(self.report_dir, exist_ok=True)
 
-    # === 1️⃣ Load and validate targets ===
-    targets_file = "data/targets.txt"
-    if not os.path.exists(targets_file):
-        print("❌ No targets.txt found.")
-        return
-    validated_targets = validate_targets(targets_file)
-    print(f"✅ {len(validated_targets)} targets validated.")
+        self.metadata = {
+            "session_id": self.session_id,
+            "timestamp": datetime.now().isoformat(),
+            "version": "11.4",
+            "status": "initialized"
+        }
 
-    # === 2️⃣ Enumeration + Probing (Parallel) ===
-    print("🕵️ Running parallel enumeration and probing...")
-    enumerated_data = run_parallel_engine(validated_targets, run_enumeration)
-    probed_data = run_parallel_engine(enumerated_data, run_probing)
-    print("✅ Enumeration & probing completed.")
+    def log(self, message: str):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"[{timestamp}] {message}")
 
-    # === 3️⃣ Crawling + Vulnerability Scanning ===
-    print("🧭 Running web crawling and vulnerability scanning...")
-    crawled_data = run_parallel_engine(probed_data, run_crawling)
-    vulns_data = run_parallel_engine(crawled_data, run_vulnerability_scan)
-    print("✅ Crawling and scanning completed.")
+    def save_metadata(self):
+        meta_path = os.path.join(self.report_dir, "metadata.json")
+        with open(meta_path, "w") as f:
+            json.dump(self.metadata, f, indent=2)
+        self.log(f"Metadata saved → {meta_path}")
 
-    # === 4️⃣ Export results to structured format ===
-    export_path = "data/results/final_reports/"
-    os.makedirs(export_path, exist_ok=True)
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    report_file = os.path.join(export_path, f"report_{timestamp}.json")
+    def execute_pipeline(self):
+        self.log("🚀 Starting Digital Sentinel Infinity Pipeline")
 
-    with open(report_file, "w") as f:
-        json.dump(vulns_data, f, indent=2)
-    print(f"📦 Results saved to: {report_file}")
+        try:
+            # === Phase 1: Enumeration ===
+            self.log("🔍 Running Enumeration Engine...")
+            enum_results = run_enumeration()
+            self.log(f"Enumeration completed → {len(enum_results)} hosts discovered")
 
-    # === 5️⃣ Export to Bugcrowd-compatible format ===
-    export_to_bugcrowd(vulns_data)
+            # === Phase 2: HTTP Probing ===
+            self.log("🌐 Running Probing Engine...")
+            probed = run_probing(enum_results)
+            self.log(f"Active targets found → {len(probed)}")
 
-    # === 6️⃣ AI Auto-Triage (OpenAI GPT integration) ===
-    print("🤖 Running AI Auto-Triage & Report Summarization...")
-    triage_summaries = analyze_findings()
-    if triage_summaries:
-        send_to_discord(triage_summaries)
-        update_memory(triage_summaries)
-        print("🧠 AI triage and memory update complete.")
-    else:
-        print("⚠️ No findings to triage.")
+            # === Phase 3: Crawling ===
+            self.log("🕷️ Running Crawling Engine...")
+            crawled_data = run_crawling(probed)
+            self.log("Crawling completed successfully")
 
-    # === 7️⃣ Finish Cycle ===
-    elapsed = time.time() - start_time
-    print(f"🏁 Digital Sentinel cycle completed in {elapsed:.2f}s.")
+            # === Phase 4: Vulnerability Scanning ===
+            self.log("🧠 Running Vulnerability Scanner...")
+            vuln_results = run_vulnerability_scan(crawled_data)
+            self.log(f"Potential findings: {len(vuln_results)}")
+
+            # === Phase 5: Validation ===
+            self.log("🧩 Validating results...")
+            validated = validate_results(vuln_results)
+            self.log(f"Validated findings: {len(validated)}")
+
+            # === Phase 6: Parallel Processing (AI-based analysis, tagging, reporting) ===
+            self.log("⚙️ Running Parallel AI Analysis...")
+            run_parallel_tasks(validated)
+            self.log("Parallel AI analysis complete")
+
+            # === Phase 7: Export Reports ===
+            self.log("📦 Exporting results to Bugcrowd/Output channel...")
+            export_results(validated, output_dir=self.report_dir)
+
+            # === Finalize ===
+            self.metadata["status"] = "completed"
+            self.save_metadata()
+            self.log("✅ Digital Sentinel Infinity cycle completed successfully.")
+
+        except Exception as e:
+            self.metadata["status"] = "failed"
+            self.metadata["error"] = str(e)
+            self.save_metadata()
+            self.log(f"❌ Fatal error: {e}")
 
 
 if __name__ == "__main__":
-    try:
-        digital_sentinel_controller()
-    except Exception as e:
-        print("💥 Fatal error in main controller:", str(e))
+    controller = QuantumSentinelController()
+    controller.execute_pipeline()
