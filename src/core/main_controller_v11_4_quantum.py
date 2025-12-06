@@ -9,9 +9,8 @@ from core.vulnerability_scanner import run_vulnerability_scan
 from core.export_bugcrowd import export_bugcrowd
 from core.validator import validate_targets
 from core.parallel_engine import run_parallel
-
-# === AI Intelligence Modules ===
 from core.ai_intelligence_oracle import analyze_reports
+from core.discord_reporter import send_discord_report
 
 
 def digital_sentinel_controller():
@@ -60,6 +59,12 @@ def digital_sentinel_controller():
     analyze_reports()
     print("✅ Phase 8 Completed.")
     print("🎯 Digital Sentinel Quantum Infinity AI Layer Operational.")
+
+    # === Phase 9: Discord Reporter ===
+    print("\n📡 Phase 9: Discord Reporter...")
+    send_discord_report()
+    print("✅ Phase 9 Completed.")
+    print("🛰️ Digital Sentinel Quantum Infinity Full Cycle Completed Successfully.")
 
     # === Wrap-up ===
     end_time = time.time()
